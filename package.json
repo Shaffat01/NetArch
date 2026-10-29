@@ -1,0 +1,17 @@
+{
+  "name": "netatlas-architecture-gui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Offline-ready unified IP-centric network architecture explorer",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node server.mjs",
+    "extract": "python scripts/extract.py",
+    "check": "node --check public/unified.js && node --check public/crud.js && node --check public/app.js && node --check server.mjs && node --check live.mjs && python scripts/extract.py",
+    "test": "node scripts/live-test.mjs && node scripts/unified-test.mjs && node scripts/crud-test.mjs && node scripts/smoke.mjs && node scripts/crud-smoke.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
+  }
+}
