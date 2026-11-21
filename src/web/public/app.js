@@ -5,6 +5,18 @@ const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (n) => (n ?? 0).toLocaleString();
 const confPct = (c) => Math.round((c ?? 0) * 100);
+const labelLink = (label, deviceId) => deviceId
+  ? `<a class="linkable" href="#/device/${encodeURIComponent(deviceId)}">${esc(label)}</a>`
+  : esc(label);
+const missingFieldsLine = (d) => {
+  const missing = [];
+  if (!d.model) missing.push('model');
+  if (!d.serial) missing.push('serial');
+  if (!d.location) missing.push('location');
+  if (d.deviceType === 'UNKNOWN') missing.push('type');
+  if (missing.length === 0) return 'complete — model, serial, location and type are known';
+  return `missing: ${missing.join(', ')}`;
+};
 const badgeCls = (t) => `badge type-${t}`;
 const TYPE_META = {
   CORE_DEVICE: { label: 'Core Device', color: '#c084fc', icon: '▣' },
@@ -28,6 +40,7 @@ async function api(path) {
 const state = {
   view: 'overview',
   q: '',
+  type: 'all',
   page: 1,
   pageSize: 40,
   deviceId: null,
@@ -39,6 +52,7 @@ function route(hash) {
   const path = parts[0] || 'overview';
   const query = new URLSearchParams(parts[1] || '');
   state.q = query.get('q') || '';
+  state.type = query.get('type') || 'all';
   state.page = Number(query.get('page') || 1);
   const seg = path.split('/').filter(Boolean);
   if (seg[0] === 'device' && seg[1]) {
@@ -117,8 +131,18 @@ async function render() {
 async function renderOverview(el, summary) {
   const graph = await api('/api/graph');
   const s = summary.stats || {};
+  let warningsCount = 0;
+  try {
+    const src = await api('/api/sources');
+    warningsCount = (src.warnings || []).length;
+  } catch { /* sources page handles failures */ }
   el.innerHTML = `
     <div class="breadcrumbs">Overview</div>
+    <div class="overview-actions">
+      <a class="badge export-badge" href="/api/export" download>Export inventory CSV</a>
+      <a class="badge" href="#/graph">View graph →</a>
+      <a class="badge" href="#/sources">Sources${warningsCount > 0 ? ` <span class="muted">· ${warningsCount} warning(s)</span>` : ''}</a>
+    </div>
     <div class="overview-grid">
       <div class="stat-card">
         <div class="label">Records parsed</div>
@@ -206,6 +230,7 @@ async function renderDevice(el, id) {
           <span class="badge ${badgeCls(d.deviceType)}">${typeMeta.label}</span>
           <span class="badge conf">${confPct(d.confidence)}% confidence</span>
           ${d.hasSerial ? '<span class="badge conf">serial evidence</span>' : ''}
+          ${d.hasName === false ? '<span class="badge conf">IP only</span>' : ''}
         </div>
         <div class="confidence"><div class="bar"><div class="fill" style="width:${confPct(d.confidence)}%"></div></div><div class="pct">${confPct(d.confidence)}%</div></div>
       </div>
@@ -223,6 +248,7 @@ async function renderDevice(el, id) {
           <dt>Serial</dt><dd class="mono">${esc(d.serial ?? '—')}</dd>
           <dt>Source sheets</dt><dd>${esc((d.originSheets || []).join(', ') || '—')}</dd>
         </dl>
+        <div class="small muted" style="margin-top:10px;">${missingFieldsLine(d)}</div>
       </div>
       <div class="section">
         <div class="section-title">Uplink chain position</div>
@@ -261,7 +287,7 @@ async function renderDevice(el, id) {
             <span class="mono">${esc(c.srcIp)}</span><span class="arrow">→</span><span class="mono">${esc(c.dstIp)}</span>
             <span class="dir">${esc(CONNECTION_KIND_META[c.kind] ?? c.kind)}</span>
           </div>
-          <div class="detail">${esc(c.srcLabel)} → ${esc(c.dstLabel)} &nbsp;·&nbsp; ${c.evidenceCount} evidence row(s)</div>
+          <div class="detail">${labelLink(c.srcLabel, c.srcDeviceId)} → ${labelLink(c.dstLabel, c.dstDeviceId)} &nbsp;·&nbsp; ${c.evidenceCount} evidence row(s)</div>
         </div>`).join('')}
     </div>
   `;
@@ -321,7 +347,7 @@ async function renderIp(el, ip) {
             <span class="mono">${esc(c.srcIp)}</span><span class="arrow">→</span><span class="mono">${esc(c.dstIp)}</span>
             <span class="dir">${esc(CONNECTION_KIND_META[c.kind] ?? c.kind)}</span>
           </div>
-          <div class="detail">${esc(c.srcLabel)} → ${esc(c.dstLabel)}</div>
+          <div class="detail">${labelLink(c.srcLabel, c.srcDeviceId)} → ${labelLink(c.dstLabel, c.dstDeviceId)}</div>
         </div>`).join('')}
     </div>
 
@@ -335,9 +361,30 @@ async function renderIp(el, ip) {
 /* ---------------- device list ---------------- */
 async function renderDevices(el) {
   const page = state.page;
-  const data = await api(`/api/devices?q=${encodeURIComponent(state.q)}&page=${page}&pageSize=${state.pageSize}`);
+  const qp = new URLSearchParams();
+  if (state.q) qp.set('q', state.q);
+  qp.set('type', state.type);
+  qp.set('page', String(page));
+  qp.set('pageSize', String(state.pageSize));
+  const data = await api(`/api/devices?${qp.toString()}`);
+
+  const chip = (id, label) => `<button data-type="${id}" class="chip ${state.type.toLowerCase() === id.toLowerCase() ? 'chip-active' : ''}">${label}</button>`;
+  const chips = [
+    chip('all', 'All'),
+    chip('named', 'Typed'),
+    chip('unknown', 'UNKNOWN'),
+    chip('ACCESS_SW', 'Access SW'),
+    chip('DIST_SW', 'Distribution SW'),
+    chip('SW', 'Switch'),
+    chip('CORE_DEVICE', 'Core Device'),
+    chip('CORE_RT', 'Core RT'),
+  ].join('');
+
   el.innerHTML = `
-    <div class="breadcrumbs">Devices <span class="muted">(${num(data.total)} · page ${page})</span></div>
+    <div class="breadcrumbs">Devices <span class="muted">(${num(data.total)} · page ${page}${state.type !== 'all' ? ' · type: ' + esc(state.type) : ''})</span>
+      <a class="badge export-badge" href="/api/export" download>Export CSV</a>
+    </div>
+    <div class="chip-row" id="type-chip-row">${chips}</div>
     <div class="section" style="padding:8px 14px;">
       <table class="table">
         <thead><tr><th>Name</th><th>Type</th><th>IPs</th><th>Conf</th></tr></thead>
@@ -353,9 +400,9 @@ async function renderDevices(el) {
       </table>
     </div>
     <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;">
-      <a class="badge" href="#/devices?q=${encodeURIComponent(state.q)}&page=${page - 1}" style="${page <= 1 ? 'opacity:.35;pointer-events:none;' : ''}">← Prev</a>
+      <a class="badge" href="#/devices?q=${encodeURIComponent(state.q)}&type=${state.type}&page=${page - 1}" style="${page <= 1 ? 'opacity:.35;pointer-events:none;' : ''}">← Prev</a>
       <span class="small" style="align-self:center;color:var(--text-3);">${page}</span>
-      <a class="badge" href="#/devices?q=${encodeURIComponent(state.q)}&page=${page + 1}" style="${page * state.pageSize >= data.total ? 'opacity:.35;pointer-events:none;' : ''}">Next →</a>
+      <a class="badge" href="#/devices?q=${encodeURIComponent(state.q)}&type=${state.type}&page=${page + 1}" style="${page * state.pageSize >= data.total ? 'opacity:.35;pointer-events:none;' : ''}">Next →</a>
     </div>
   `;
   $$('tr[data-id]', el).forEach((row) => {
@@ -364,9 +411,13 @@ async function renderDevices(el) {
       location.hash = `#/device/${encodeURIComponent(row.dataset.id)}`;
     });
   });
+  $$('#type-chip-row button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      location.hash = `#/devices?q=${encodeURIComponent(state.q)}&type=${encodeURIComponent(btn.dataset.type)}&page=1`;
+    });
+  });
 }
 
-/* ---------------- IP list ---------------- */
 async function renderIps(el) {
   const page = state.page;
   const data = await api(`/api/ips?q=${encodeURIComponent(state.q)}&page=${page}&pageSize=${state.pageSize}`);

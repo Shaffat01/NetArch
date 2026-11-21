@@ -86,6 +86,45 @@ describe('API', () => {
     expect(body.devices.length).toBeGreaterThanOrEqual(1);
   });
 
+  it('GET /api/devices?type=unknown filters', async () => {
+    const all = (await app.inject({ method: 'GET', url: '/api/devices?type=all' })).json();
+    const unknown = (await app.inject({ method: 'GET', url: '/api/devices?type=unknown' })).json();
+    expect(unknown.total).toBeLessThanOrEqual(all.total);
+    for (const d of unknown.items) expect(d.deviceType).toBe('UNKNOWN');
+    const named = (await app.inject({ method: 'GET', url: '/api/devices?type=named' })).json();
+    expect(named.items.every((d: { deviceType: string; hasName: boolean }) => d.deviceType !== 'UNKNOWN' && d.hasName)).toBe(true);
+  });
+
+  it('GET /api/export (CSV)', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/export?format=csv' });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toContain('text/csv');
+    expect(res.headers['content-disposition']).toContain('attachment');
+    const text = res.body;
+    const lines = text.trimEnd().split('\r\n');
+    expect(lines.length).toBeGreaterThanOrEqual(2);
+    expect(lines[0]).toContain('canonical_name');
+    expect(lines[0]).toContain('device_type');
+    expect(text).toContain('NDC-CORE-SW');
+  });
+
+  it('GET /api/export (JSON)', async () => {
+    const body = (await app.inject({ method: 'GET', url: '/api/export?format=json' })).json();
+    expect(body.stats.devices).toBeGreaterThanOrEqual(2);
+    expect(body.devices.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('/api/devices/:id link labels carry device ids', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/devices/dev_no_c_sw' });
+    // fixture never links everything, but the endpoint must not crash and must include ids
+    const body = res.json ? res.json() : JSON.parse(res.body);
+    const conns = body.connections || [];
+    for (const c of conns) {
+      expect(c).toHaveProperty('srcDeviceId');
+      expect(c).toHaveProperty('dstDeviceId');
+    }
+  });
+
   it('404 for missing device', async () => {
     const res = await app.inject({ method: 'GET', url: '/api/devices/dev_missing_xxxx' });
     expect(res.statusCode).toBe(404);

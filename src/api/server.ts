@@ -15,6 +15,22 @@ export interface AppDeps {
   config: AppConfig;
 }
 
+
+/** RFC-4180-ish cell escaping: quote when the value needs it, double internal quotes. */
+function csvEscape(v: unknown): string {
+  const s = String(v ?? '');
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function matchesTypeFilter(d: { hasName: boolean; deviceType: string }, type: string): boolean {
+  switch (type) {
+    case 'all': return true;
+    case 'named': return d.hasName && d.deviceType !== 'UNKNOWN'; // typed + has evidence
+    case 'unknown': return d.deviceType === 'UNKNOWN';
+    default: return d.deviceType === type;
+  }
+}
+
 export async function buildApp(deps?: Partial<AppDeps>): Promise<FastifyInstance> {
   const config = { ...loadConfig(), ...(deps?.config ?? {}) } as AppConfig;
   const app = Fastify({ logger: false });
@@ -57,15 +73,22 @@ export async function buildApp(deps?: Partial<AppDeps>): Promise<FastifyInstance
   });
 
   // ----- search & listing -----
-  const qSchema = z.object({ q: z.string().max(200).optional(), page: z.coerce.number().int().min(1).default(1), pageSize: z.coerce.number().int().min(1).max(200).default(50) });
+  const DEVICE_TYPES = ['UNKNOWN', 'ACCESS_SW', 'DIST_SW', 'SW', 'CORE_DEVICE', 'CORE_RT', 'ISP'] as const;
+  const qSchema = z.object({
+    q: z.string().max(200).optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(200).default(50),
+    type: z.enum(['all', 'named', 'unknown', ...DEVICE_TYPES]).default('all'),
+  });
 
   app.get('/api/devices', async (req) => {
     const q = qSchema.parse(req.query);
-    const all = q.q ? searchDevices(db, q.q, 200) : loadDevices(db);
+    let all = q.q ? searchDevices(db, q.q, 200) : loadDevices(db);
+    if (q.type !== 'all') all = all.filter((d) => matchesTypeFilter(d, q.type));
     const total = all.length;
     const start = (q.page - 1) * q.pageSize;
     const items = all.slice(start, start + q.pageSize);
-    return { total, page: q.page, pageSize: q.pageSize, items };
+    return { total, page: q.page, pageSize: q.pageSize, type: q.type, items };
   });
 
   app.get('/api/devices/:id', async (req, reply) => {
@@ -83,6 +106,7 @@ export async function buildApp(deps?: Partial<AppDeps>): Promise<FastifyInstance
       const dstDevice = device.ips.includes(c.dstIp) ? device : allDevices.find((d) => d.ips.includes(c.dstIp));
       return {
         srcIp: c.srcIp, dstIp: c.dstIp, kind: c.kind, matchKind: c.matchKind,
+        srcDeviceId: srcDevice?.id ?? null, dstDeviceId: dstDevice?.id ?? null,
         srcLabel: srcDevice?.canonicalName ?? c.srcIp,
         dstLabel: dstDevice?.canonicalName ?? c.dstIp,
         evidenceCount: c.evidence.length,
@@ -147,11 +171,55 @@ export async function buildApp(deps?: Partial<AppDeps>): Promise<FastifyInstance
         const dst = devices.find((d) => d.ips.includes(c.dstIp));
         return {
           srcIp: c.srcIp, dstIp: c.dstIp, kind: c.kind, matchKind: c.matchKind,
+          srcDeviceId: src?.id ?? null, dstDeviceId: dst?.id ?? null,
           srcLabel: src?.canonicalName ?? c.srcIp, dstLabel: dst?.canonicalName ?? c.dstIp,
           evidence: c.evidence,
         };
       }),
     };
+  });
+
+
+  /**
+   * Inventory export — one row per device (CSV) or the full snapshot (JSON).
+   * Read-only; safe to download from the UI or curl.
+   */
+  app.get('/api/export', async (req, reply) => {
+    const format = z.enum(['csv', 'json']).default('csv').parse((req.query as { format?: string })?.format);
+    const devices = loadDevices(db);
+    const ips = loadIps(db);
+    const connections = loadConnections(db);
+
+    if (format === 'json') {
+      return {
+        generatedAt: new Date().toISOString(),
+        stats: { devices: devices.length, ips: ips.length, connections: connections.length },
+        devices,
+        ips,
+        connections,
+      };
+    }
+
+    const header = ['id', 'canonical_name', 'device_type', 'has_name', 'location', 'model', 'serial', 'tag', 'confidence', 'records', 'chain_position', 'ips', 'aliases', 'sources', 'origin_sheets'];
+    const rows: string[] = [header.map(csvEscape).join(',')];
+    for (const d of devices) {
+      const aliases = (d.aliases || []).map((a) => a.cleanedName).filter(Boolean).join('; ');
+      const cells = [
+        d.id, d.canonicalName, d.deviceType, d.hasName ? 'true' : 'false',
+        d.location, d.model, d.serial, d.tag,
+        typeof d.confidence === 'number' ? d.confidence.toFixed(2) : '',
+        d.records, d.chainPosition,
+        (d.ips || []).join('; '),
+        aliases,
+        (d.sources || []).join(' | '),
+        (d.originSheets || []).join(' | '),
+      ];
+      rows.push(cells.map(csvEscape).join(','));
+    }
+    const filename = `netarch-inventory-${new Date().toISOString().slice(0, 10)}.csv`;
+    reply.header('content-type', 'text/csv; charset=utf-8');
+    reply.header('content-disposition', `attachment; filename="${filename}"`);
+    return rows.join('\r\n') + '\r\n';
   });
 
   app.get('/api/graph', async () => {

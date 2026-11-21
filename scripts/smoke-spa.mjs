@@ -52,6 +52,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 await waitFor(async () => window.document.querySelector('.stat-card') !== null, 'stat cards', 8000).catch((e) => { console.log('content HTML:', window.document.getElementById('content').innerHTML.slice(0, 500)); console.log('topbar stats:', window.document.getElementById('topbar-stats').innerHTML.slice(0, 300)); });
 console.log('overview title:', window.document.getElementById('topbar-title').textContent);
 console.log('overview stats spans:', window.document.getElementById('topbar-stats').children.length);
+console.log('overview export link:', !!window.document.querySelector('.overview-actions a[download]'));
+console.log('overview warnings pill:', /warning/i.test(window.document.querySelector('.overview-actions')?.textContent || ''));
 console.log('stat cards:', window.document.querySelectorAll('.stat-card').length);
 console.log('device rows in sidebar:', window.document.querySelectorAll('#device-list .device-row').length);
 
@@ -86,10 +88,27 @@ window.location.hash = '#/ips';
 await waitFor(async () => window.document.querySelector('#topbar-title')?.textContent?.trim() === 'IP Index', 'ips rows', 15000);
 console.log('ips table rows:', window.document.querySelectorAll('.table tbody tr').length);
 
+// devices view: chips + type filter
+window.location.hash = '#/devices?type=unknown';
+await waitFor(async () => window.document.querySelector('#type-chip-row') !== null, 'chip row', 15000);
+console.log('chip count:', window.document.querySelectorAll('#type-chip-row .chip').length);
+console.log('active chip:', window.document.querySelector('#type-chip-row .chip-active')?.textContent?.trim());
+console.log('export badge on devices view:', !!window.document.querySelector('a.export-badge'));
+const chipRow = window.document.querySelector('#type-chip-row');
+const rowsAfterFilter = window.document.querySelectorAll('.table tbody tr').length;
+
+// click the "Typed" chip -> URL changes, list filters
+const typedBtn = [...chipRow.querySelectorAll('.chip')].find((b) => b.textContent.trim() === 'Typed');
+typedBtn?.click();
+await waitFor(async () => window.location.hash.includes('type=named'), 'named chip URL', 10000);
+await waitFor(async () => window.document.querySelector('#type-chip-row .chip-active')?.textContent?.trim() === 'Typed', 'typed chip active', 10000);
+console.log('typed chip active:', window.document.querySelector('#type-chip-row .chip-active')?.textContent?.trim());
+
 // search flow: devices view with query
 window.location.hash = '#/devices?q=NDC-CORE';
 await waitFor(async () => window.document.querySelector('#topbar-title')?.textContent?.trim() === 'Devices', 'search rows', 15000);
 console.log('search result rows:', window.document.querySelectorAll('.table tbody tr').length);
+console.log('rows after UNKNOWN chip:', rowsAfterFilter);
 
 console.log('SMOKE_OK');
 await app.close();

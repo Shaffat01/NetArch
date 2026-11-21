@@ -49,6 +49,12 @@ workbooks (xlsx)
   aliases (each with source sheet/file, confidence, and the sheet-count evidence).
 - **Unmatched neighbors are never invented.** Edges without IP evidence stay flagged
   `name`; edges without either are recorded as unmatched, not drawn.
+- **The UI is exportable.** One click downloads the full inventory as CSV
+  (one row per device — name, type, IPs, aliases, serial, model, location,
+  confidence, chain position, sources) or the full JSON snapshot.
+- **The device list is filterable by type** (all / typed / UNKNOWN / each
+  device type) via chips above the table — the filter is URL-driven and
+  shareable.
 - **Every record is accounted for** — records, IPs, devices, connections, and the 3
   known warnings are all visible on the Sources page.
 
@@ -61,12 +67,13 @@ All endpoints served under `/api`:
 | `GET /api/health` | Snapshot health + validation details |
 | `GET /api/summary` | Headline counts + ingest metadata |
 | `GET /api/sources` | Per-sheet record/warning inventory |
-| `GET /api/devices?q&page&pageSize` | Device list (named devices first) |
+| `GET /api/devices?q&type&page&pageSize` | Device list (named devices first) — `type` = all / named / unknown / a device type |
 | `GET /api/devices/:id` | Device detail — aliases, IPs, connections, chain uplink/downlink |
 | `GET /api/devices/:id/ips` · `/connections` | Device IPs / connections |
 | `GET /api/ips?q&page&pageSize` | IP index (IPv4 first) |
 | `GET /api/ips/:ip` | IP detail — owning devices, connections, aliases |
 | `GET /api/graph` | IP-anchored layered graph (nodes + edges + summary) |
+| `GET /api/export?format=csv\|json` | Inventory export — one CSV row per device (IPs, aliases, sources, confidence) or the full JSON snapshot |
 | `GET /api/search?q` | Devices + IPs matched by name, alias, IP, serial, model, location |
 
 ## Development
@@ -80,8 +87,9 @@ npm run dev        # same, with tsx watch
 ```
 
 `scripts/smoke-spa.mjs` boots the API and drives the SPA in jsdom (overview →
-device → graph → sources → IPs → search) — it is the regression harness for
-front-end wiring without a browser.
+device → graph → sources → IPs → search → type filter + chip click
+→ export link) — it is the regression harness for front-end wiring
+without a browser.
 
 ## Layout
 
