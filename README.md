@@ -1,6 +1,6 @@
 # NetArch — IP-centric Network Infrastructure Inventory
 
-Strict-TypeScript, offline, IP-first network inventory. Two authoritative source
+Strict-TypeScript, offline, IP-first network inventory. Three authoritative source
 workbooks are ingested into a local SQLite snapshot and served through a Fastify
 API and a self-contained web SPA — no external services, no internet calls.
 
@@ -9,7 +9,7 @@ API and a self-contained web SPA — no external services, no internet calls.
 ## Quick start
 
 ```bash
-# 1. Place the two read-only workbooks in data/sources/
+# 1. Place the three read-only workbooks in data/sources/
 #    (see "Inputs" below)
 npm install
 npm run ingest     # parse → normalize → resolve → merge → persist (a few seconds)
@@ -21,12 +21,13 @@ to override. The server refuses to start without a snapshot — run `npm run ing
 
 ## Inputs
 
-`data/sources/` holds the two read-only, authoritative source workbooks:
+`data/sources/` holds the three read-only, authoritative source workbooks:
 
 | File | Contents |
 | --- | --- |
 | `HQ-ACCESS-SWITCH-INFO.xlsx` | HQ access/distribution/core register (5 tabs) |
 | `All Building VLAN & Floor Information(NOC).xlsx` | Full tenant inventory — WHIL/WMTC buildings, DC/NDC, network blocks, CCTV/WiFi/Machine IT, serial numbers (22 tabs) |
+| `ISP Real IPs.xlsx` | By-site ISP provider allocations — Corporate/DC-HQ/NDC-HQ × BracNet/AGNI/ADN, one `/28` per row (9 rows) |
 
 Both are committed nowhere — they are real, sensitive network data and stay out of git.
 The snapshot the app serves from is `data/netarch.db` (also generated, also ignored).
@@ -57,6 +58,9 @@ workbooks (xlsx)
   shareable.
 - **Every record is accounted for** — records, IPs, devices, connections, and the 3
   known warnings are all visible on the Sources page.
+- **Provider ranges are carried as evidence** — the 9 `/28` allocations ingest as
+  network records and are merged by IP like everything else, so a provider range
+  that matches an existing record is one row, never two.
 
 ## API
 

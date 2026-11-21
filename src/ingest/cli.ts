@@ -6,7 +6,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { loadConfig } from '../config/index.js';
 import { loadWorkbook } from './workbook.js';
-import { SHEET_SPECS_HQ, SHEET_SPECS_NOC } from './config.js';
+import { SHEET_SPECS_HQ, SHEET_SPECS_NOC, SHEET_SPECS_ISP } from './config.js';
 import { parseSheet } from './sheets.js';
 import { mergeRecords, type MergeResult } from '../merge/index.js';
 import { openDb, saveIngest } from '../db/index.js';
@@ -51,8 +51,10 @@ export async function runIngest(opts: IngestOptions = {}): Promise<IngestOutput>
     }
     const wb = await loadWorkbook(filePath);
     // dispatch by file identity
-    const isHq = fileName.toUpperCase().includes('HQ-ACCESS-SWITCH-INFO');
-    const specs = isHq ? SHEET_SPECS_HQ : SHEET_SPECS_NOC;
+    const upper = fileName.toUpperCase();
+    const isHq = upper.includes('HQ-ACCESS-SWITCH-INFO');
+    const isIsp = upper.includes('ISP REAL IP');
+    const specs = isHq ? SHEET_SPECS_HQ : isIsp ? SHEET_SPECS_ISP : SHEET_SPECS_NOC;
     for (const ws of wb.sheets) {
       const spec = specs.find((s) => s.name === ws.name);
       if (!spec) {

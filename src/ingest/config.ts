@@ -449,3 +449,26 @@ export const ALL_SHEET_SPECS = [...SHEET_SPECS_HQ, ...SHEET_SPECS_NOC];
 export function specForSheet(sheetName: string): SheetSpec | undefined {
   return ALL_SHEET_SPECS.find((s) => s.name === sheetName);
 }
+
+/**
+ * ISP Real IPs workbook: by-site provider network allocations (one /28 each).
+ * Layout: Name (site-provider) | Provider | Real IP — one data row per row.
+ */
+export const SHEET_SPECS_ISP: SheetSpec[] = [
+  {
+    name: 'Real IPs',
+    kind: 'panels',
+    dataStart: 2,
+    headerRow: 1,
+    bannerRows: 0,
+    panels: [
+      {
+        panelCols: [0, 1, 2],
+        nameCol: 0,
+        kind: 'network',
+        remarksCol: 1,
+      },
+    ],
+    hq: null,
+  },
+];

@@ -16,6 +16,7 @@ export const WEB_PUBLIC_DIR = path.join(SRC_DIR, 'web', 'public');
 export const SOURCE_FILES = [
   'HQ-ACCESS-SWITCH-INFO.xlsx',
   'All Building VLAN & Floor Information(NOC).xlsx',
+  'ISP Real IPs.xlsx',
 ];
 
 export interface AppConfig {
