@@ -17,6 +17,7 @@ export const SOURCE_FILES = [
   'HQ-ACCESS-SWITCH-INFO.xlsx',
   'All Building VLAN & Floor Information(NOC).xlsx',
   'ISP Real IPs.xlsx',
+  'DC Link Peerings.xlsx',
 ];
 
 export interface AppConfig {

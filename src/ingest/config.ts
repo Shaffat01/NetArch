@@ -472,3 +472,23 @@ export const SHEET_SPECS_ISP: SheetSpec[] = [
     hq: null,
   },
 ];
+
+/** DC provider link peerings from the DC WAN/Core-RT IOS configs. One row per loopback. */
+export const SHEET_SPECS_PEERINGS: SheetSpec[] = [
+  {
+    name: 'Peerings',
+    kind: 'panels',
+    dataStart: 2,
+    headerRow: 1,
+    bannerRows: 0,
+    panels: [
+      {
+        panelCols: [0, 1, 2],
+        nameCol: 0,
+        kind: 'network',
+        remarksCol: 1,
+      },
+    ],
+    hq: null,
+  },
+];

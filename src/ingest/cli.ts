@@ -6,7 +6,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { loadConfig } from '../config/index.js';
 import { loadWorkbook } from './workbook.js';
-import { SHEET_SPECS_HQ, SHEET_SPECS_NOC, SHEET_SPECS_ISP } from './config.js';
+import { SHEET_SPECS_HQ, SHEET_SPECS_NOC, SHEET_SPECS_ISP, SHEET_SPECS_PEERINGS } from './config.js';
 import { parseSheet } from './sheets.js';
 import { mergeRecords, type MergeResult } from '../merge/index.js';
 import { openDb, saveIngest } from '../db/index.js';
@@ -54,7 +54,8 @@ export async function runIngest(opts: IngestOptions = {}): Promise<IngestOutput>
     const upper = fileName.toUpperCase();
     const isHq = upper.includes('HQ-ACCESS-SWITCH-INFO');
     const isIsp = upper.includes('ISP REAL IP');
-    const specs = isHq ? SHEET_SPECS_HQ : isIsp ? SHEET_SPECS_ISP : SHEET_SPECS_NOC;
+    const isPeerings = upper.includes('DC LINK PEERING');
+    const specs = isHq ? SHEET_SPECS_HQ : isIsp ? SHEET_SPECS_ISP : isPeerings ? SHEET_SPECS_PEERINGS : SHEET_SPECS_NOC;
     for (const ws of wb.sheets) {
       const spec = specs.find((s) => s.name === ws.name);
       if (!spec) {
