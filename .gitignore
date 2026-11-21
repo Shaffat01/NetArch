@@ -1,4 +1,7 @@
 node_modules/
 .env
+data/netarch.db
+data/sources/
 data/user-state.json
 *.tmp
+dist/
