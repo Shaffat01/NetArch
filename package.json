@@ -1,17 +1,32 @@
 {
-  "name": "netatlas-architecture-gui",
-  "version": "1.0.0",
+  "name": "netarch-ip-inventory",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "Offline-ready unified IP-centric network architecture explorer",
+  "description": "IP-centric network infrastructure inventory ETL: xlsx ingest, normalize, resolve, merge, connectivity graph, Fastify API and web UI",
+  "engines": {
+    "node": ">=22.5"
+  },
   "scripts": {
-    "start": "node server.mjs",
-    "dev": "node server.mjs",
-    "extract": "python scripts/extract.py",
-    "check": "node --check public/unified.js && node --check public/crud.js && node --check public/app.js && node --check server.mjs && node --check live.mjs && python scripts/extract.py",
-    "test": "node scripts/live-test.mjs && node scripts/unified-test.mjs && node scripts/crud-test.mjs && node scripts/smoke.mjs && node scripts/crud-smoke.mjs"
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "ingest": "tsx src/ingest/cli.ts",
+    "test": "vitest run",
+    "check": "tsc --noEmit",
+    "legacy:start": "node server.mjs"
+  },
+  "dependencies": {
+    "@fastify/static": "^8.2.0",
+    "exceljs": "^4.4.0",
+    "fastify": "^5.12.8",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "jsdom": "26.1.0"
+    "@types/node": "^22.20.5",
+    "jsdom": "26.1.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.1"
   }
 }

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="NetArch — IP-centric network infrastructure inventory">
+  <title>NetArch — Network Infrastructure Inventory</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <a href="#/overview" class="brand" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;">
+        <div class="brand-mark">N<span>A</span></div>
+        <div class="brand-text">
+          <div class="brand-title">NetArch</div>
+          <div class="brand-sub">Infrastructure Inventory</div>
+        </div>
+      </a>
+      <div class="search">
+        <input id="search-input" type="search" placeholder="Search device, IP, hostname…" autocomplete="off" spellcheck="false">
+        <kbd>/</kbd>
+      </div>
+      <div class="nav">
+        <a href="#/devices" class="nav-item" data-nav="devices"><span class="nav-ic">◈</span> Devices</a>
+        <a href="#/ips" class="nav-item" data-nav="ips"><span class="nav-ic">◆</span> IPs</a>
+        <a href="#/graph" class="nav-item" data-nav="graph"><span class="nav-ic">⟡</span> Graph</a>
+        <a href="#/sources" class="nav-item" data-nav="sources"><span class="nav-ic">≡</span> Sources</a>
+      </div>
+      <div class="sidebar-list" id="sidebar-list">
+        <div class="sidebar-caption">Devices</div>
+        <div id="device-list" class="list"></div>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-title" id="topbar-title">Overview</div>
+        <div class="topbar-stats" id="topbar-stats"></div>
+      </header>
+      <section class="content" id="content"></section>
+    </main>
+  </div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
