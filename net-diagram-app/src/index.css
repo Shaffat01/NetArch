@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  /* Smooth Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0f172a;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+  }
+}
+
+/* Custom Animations for NOC Dashboard */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.3), 0 0 30px rgba(59, 130, 246, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(59, 130, 246, 0.6), 0 0 45px rgba(59, 130, 246, 0.25);
+  }
+}
+
+@keyframes alertGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.8);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-noc-selected {
+  animation: pulseGlow 2.5s infinite ease-in-out;
+}
+
+.animate-noc-offline {
+  animation: alertGlow 1.5s infinite ease-in-out;
+}
+
+.animate-drawer {
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-tab {
+  animation: fadeInScale 0.2s ease-out forwards;
+}
+
+/* React Flow Controls Dark Styling */
+.react-flow__controls {
+  background: rgba(15, 23, 42, 0.85) !important;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(51, 65, 85, 0.8) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+}
+
+.react-flow__controls-button {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.5) !important;
+  fill: #94a3b8 !important;
+  transition: all 0.2s !important;
+}
+
+.react-flow__controls-button:hover {
+  background: rgba(59, 130, 246, 0.2) !important;
+  fill: #ffffff !important;
+}
