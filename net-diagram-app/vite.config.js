@@ -4,7 +4,7 @@ import { defineConfig, loadEnv } from 'vite'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const apiTarget = env.VITE_API_TARGET || `http://127.0.0.1:${env.BACKEND_PORT || '8000'}`
+  const apiTarget = env.VITE_API_TARGET || `http://127.0.0.1:${env.BACKEND_PORT || '8001'}`
   return {
     plugins: [react()],
     server: {
