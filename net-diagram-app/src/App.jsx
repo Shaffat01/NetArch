@@ -1633,15 +1633,32 @@ function DeviceDrawer({ node, activeTab, setActiveTab, onClose, onDelete, siteAc
                   <InfoRow label="Syslog" value={d.syslogServer || d.syslogHost || '192.168.100.121'} />
                 </InfoCard>
                 <InfoCard title="Connectivity">
-                  <InfoRow label="Uplinks" value={d.uplinks || '—'} />
-                  <InfoRow label="Downlinks" value={d.downlinks || '—'} />
-                  <InfoRow label="VLANs" value={typeof d.vlans === 'string' ? d.vlans : (Array.isArray(d.vlans) ? `${d.vlans.length} VLANs` : '—')} />
+                  {d.uplinks && (
+                    <div className="mb-2">
+                      <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">▲ Uplinks</div>
+                      <div className="space-y-1">
+                        {String(d.uplinks).split(/;\s*/).filter(Boolean).map((line, i) => (
+                          <div key={i} className="text-[11px] text-slate-200 font-sans leading-snug pl-2 border-l-2 border-emerald-500/40">{line.trim()}</div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {d.downlinks && (
+                    <div className="mb-2">
+                      <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">▼ Downlinks</div>
+                      <div className="space-y-1">
+                        {String(d.downlinks).split(/;\s*/).filter(Boolean).map((line, i) => (
+                          <div key={i} className="text-[11px] text-slate-200 font-sans leading-snug pl-2 border-l-2 border-sky-500/40">{line.trim()}</div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <InfoRow label="Routing" value={d.routingProtocols || '—'} />
                   <InfoRow label="OSPF Areas" value={d.ospfAreas || '—'} />
                 </InfoCard>
                 {d.notes && (
                   <InfoCard title="Notes">
-                    <div className="text-[11px] text-slate-300 font-sans whitespace-pre-wrap leading-relaxed">{d.notes}</div>
+                    <div className="text-[11px] text-slate-300 font-sans leading-relaxed">{d.notes}</div>
                   </InfoCard>
                 )}
                 <InfoCard title="Quick Stats">
@@ -1667,30 +1684,80 @@ function DeviceDrawer({ node, activeTab, setActiveTab, onClose, onDelete, siteAc
 
         {activeTab === 'interfaces' && (
           <div className="space-y-2 animate-tab">
-            <div className="text-[11px] text-slate-400 font-sans font-bold uppercase tracking-wider mb-1">
-              Active Interfaces ({Array.isArray(d.interfaces) ? d.interfaces.length : '—'})
-            </div>
-            {Array.isArray(d.interfaces) && d.interfaces.length > 0 ? (
-              d.interfaces.map((intf, idx) => (
-                <div key={idx} className="bg-slate-900/70 p-3 rounded-lg border border-slate-800 hover:border-slate-700 space-y-1">
-                  <div className="flex justify-between items-center flex-wrap gap-1">
-                    <span className="text-cyan-300 font-bold">{intf.name || intf.port}</span>
-                    <div className="flex items-center gap-1.5">
-                      {intf.vlan && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">VLAN {intf.vlan}</span>
-                      )}
-                      {intf.nat && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">NAT {intf.nat}</span>
-                      )}
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                        (intf.status || 'up') === 'up' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
-                      }`}>{(intf.status || 'UP').toUpperCase()}</span>
-                    </div>
+            {/* Switch/router with string interfaces (semicolon-separated port list) */}
+            {typeof d.interfaces === 'string' && d.interfaces.length > 5 ? (() => {
+              const ports = d.interfaces.split(/;\s*/).map(s => s.trim()).filter(Boolean);
+              // Parse each line: "PortName → Description (details)" or "PortName (details, vlan X, ...)"
+              const parsed = ports.map(line => {
+                // Try to extract leading port name
+                const m = line.match(/^([A-Z][a-z]*\d+(?:\/\d+){0,3}(?:\.\d+)?(?:‑[A-Z]+)?)\s*(.*)$/);
+                if (m) {
+                  return { name: m[1], desc: m[2].trim() };
+                }
+                return { name: line, desc: '' };
+              });
+              return (
+                <>
+                  <div className="text-[11px] text-slate-400 font-sans font-bold uppercase tracking-wider mb-1">
+                    Ports ({parsed.length})
                   </div>
-                  {(intf.ip || intf.mode) && <div className="text-slate-200 text-[11px]">{intf.ip || intf.mode}</div>}
-                  <div className="text-[11px] text-slate-400 font-sans">{intf.description || intf.desc}</div>
+                  <div className="bg-slate-900/70 rounded-lg border border-slate-800 overflow-hidden">
+                    <table className="w-full text-[11px]">
+                      <thead>
+                        <tr className="border-b border-slate-800 bg-slate-900/80">
+                          <th className="text-left px-2 py-1.5 text-cyan-300 font-mono font-bold w-[110px]">Port</th>
+                          <th className="text-left px-2 py-1.5 text-slate-300">Description / Detail</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {parsed.map((p, i) => {
+                          const isShut = /shut|decommissioned|removed/i.test(p.desc);
+                          const isUp = !isShut && !/^Vlan\d/i.test(p.name) && !/^Null0/i.test(p.name);
+                          return (
+                            <tr key={i} className={`border-b border-slate-800/40 ${isShut ? 'bg-rose-950/20' : 'hover:bg-slate-800/30'}`}>
+                              <td className="px-2 py-1 font-mono font-bold text-cyan-300 align-top">
+                                {p.name}
+                              </td>
+                              <td className="px-2 py-1 text-slate-300">
+                                <span className={isShut ? 'text-rose-400 font-semibold' : ''}>{p.desc}</span>
+                                {isShut && <span className="text-[9px] ml-1.5 px-1 rounded bg-rose-500/30 text-rose-200 font-bold">SHUT</span>}
+                                {!isShut && /10G/i.test(p.desc) && <span className="text-[9px] ml-1.5 px-1 rounded bg-sky-500/20 text-sky-300 font-bold">10G</span>}
+                                {!isShut && /1 Gbps|1G/i.test(p.desc) && !/10G/.test(p.desc) && <span className="text-[9px] ml-1.5 px-1 rounded bg-emerald-500/20 text-emerald-300 font-bold">1G</span>}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              );
+            })() : Array.isArray(d.interfaces) && d.interfaces.length > 0 ? (
+              <>
+                <div className="text-[11px] text-slate-400 font-sans font-bold uppercase tracking-wider mb-1">
+                  Active Interfaces ({d.interfaces.length})
                 </div>
-              ))
+                {d.interfaces.map((intf, idx) => (
+                  <div key={idx} className="bg-slate-900/70 p-3 rounded-lg border border-slate-800 hover:border-slate-700 space-y-1">
+                    <div className="flex justify-between items-center flex-wrap gap-1">
+                      <span className="text-cyan-300 font-bold">{intf.name || intf.port}</span>
+                      <div className="flex items-center gap-1.5">
+                        {intf.vlan && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">VLAN {intf.vlan}</span>
+                        )}
+                        {intf.nat && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">NAT {intf.nat}</span>
+                        )}
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                          (intf.status || 'up') === 'up' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                        }`}>{(intf.status || 'UP').toUpperCase()}</span>
+                      </div>
+                    </div>
+                    {(intf.ip || intf.mode) && <div className="text-slate-200 text-[11px]">{intf.ip || intf.mode}</div>}
+                    <div className="text-[11px] text-slate-400 font-sans">{intf.description || intf.desc}</div>
+                  </div>
+                ))}
+              </>
             ) : (
               <div className="text-slate-500 p-6 text-center bg-slate-900/40 rounded-lg border border-slate-800/50">No interfaces mapped.</div>
             )}
@@ -1796,30 +1863,76 @@ function DeviceDrawer({ node, activeTab, setActiveTab, onClose, onDelete, siteAc
 
         {activeTab === 'vlans' && (
           <div className="space-y-2 animate-tab">
-            {typeof d.vlans === 'string' && d.vlans ? (
+            {typeof d.vlans === 'string' && d.vlans ? (() => {
+              // Parse "120(ADN-INT-PRI), 219(ADN-DATA-PRI), 502(AGNI-INT-PRI)" format
+              const entries = d.vlans.split(/,\s*/).map(s => s.trim()).filter(Boolean);
+              // Categorize VLANs
+              const ispVlans = entries.filter(e => /ADN|AGNI|Brac|INT|DATA|PRI|SEC/i.test(e) && !/FW/i.test(e));
+              const internalVlans = entries.filter(e => /FW|PBR|RT-FW|MGMT|SVI/i.test(e) || /via ISL/i.test(e));
+              return (
+                <>
+                  <div className="text-[11px] text-slate-400 font-sans font-bold uppercase tracking-wider mb-1">
+                    VLANs ({entries.length} total)
+                  </div>
+                  {ispVlans.length > 0 && (
+                    <div className="mb-2">
+                      <div className="text-[10px] text-sky-400 font-bold uppercase tracking-wider mb-1">ISP Trunk VLANs</div>
+                      <div className="flex flex-wrap gap-1">
+                        {ispVlans.map((v, i) => {
+                          const vm = v.match(/^(\d+)\/?(\d+)?\(?([^)]*)\)?/);
+                          const id = vm ? (vm[2] ? `${vm[1]}/${vm[2]}` : vm[1]) : v;
+                          const name = vm ? vm[3] : v;
+                          const isPri = /PRI/i.test(v) && !/SEC/i.test(v);
+                          const isSec = /SEC/i.test(v);
+                          return (
+                            <span key={i} className={`text-[10px] px-1.5 py-1 rounded border font-mono ${
+                              isPri ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' :
+                              isSec ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' :
+                              'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                            }`}>
+                              <b>{id}</b>{name && <span className="text-slate-400 ml-1 font-sans">{name}</span>}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {internalVlans.length > 0 && (
+                    <div className="mb-2">
+                      <div className="text-[10px] text-violet-400 font-bold uppercase tracking-wider mb-1">Internal / Transit VLANs</div>
+                      <div className="flex flex-wrap gap-1">
+                        {internalVlans.map((v, i) => {
+                          const vm = v.match(/^(\d+)\/?(\d+)?\(?([^)]*)\)?/);
+                          const id = vm ? (vm[2] ? `${vm[1]}/${vm[2]}` : vm[1]) : v;
+                          const name = vm ? vm[3] : v;
+                          return (
+                            <span key={i} className="text-[10px] px-1.5 py-1 rounded border bg-rose-500/15 text-rose-300 border-rose-500/30 font-mono">
+                              <b>{id}</b>{name && <span className="text-slate-400 ml-1 font-sans">{name}</span>}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })() : Array.isArray(d.vlans) && d.vlans.length > 0 ? (
               <>
-                <div className="text-[11px] text-slate-400 font-sans font-bold uppercase tracking-wider mb-1">VLAN Summary</div>
-                <div className="bg-slate-900/70 p-3 rounded-lg border border-slate-800 text-[11px] text-slate-300 font-sans whitespace-pre-wrap leading-relaxed">{d.vlans}</div>
+                <div className="text-[11px] text-slate-400 font-sans font-bold uppercase tracking-wider mb-1">Configured VLANs ({d.vlans.length})</div>
+                <div className="grid grid-cols-1 gap-2">
+                  {d.vlans.map((vlan, idx) => (
+                    <div key={idx} className="bg-slate-900/70 p-3 rounded-lg border border-slate-800 flex justify-between items-center gap-2">
+                      <div>
+                        <span className="text-purple-300 font-bold">VLAN {vlan.id}</span>
+                        <span className="text-slate-200 ml-3">{vlan.name}</span>
+                      </div>
+                      {vlan.ports && <span className="text-[10px] text-slate-400 font-sans max-w-[180px] text-right truncate">{vlan.ports}</span>}
+                    </div>
+                  ))}
+                </div>
               </>
             ) : (
-              <>
-                <div className="text-[11px] text-slate-400 font-sans font-bold uppercase tracking-wider mb-1">Configured VLANs ({Array.isArray(d.vlans) ? d.vlans.length : 0})</div>
-                {Array.isArray(d.vlans) && d.vlans.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-2">
-                    {d.vlans.map((vlan, idx) => (
-                      <div key={idx} className="bg-slate-900/70 p-3 rounded-lg border border-slate-800 flex justify-between items-center gap-2">
-                        <div>
-                          <span className="text-purple-300 font-bold">VLAN {vlan.id}</span>
-                          <span className="text-slate-200 ml-3">{vlan.name}</span>
-                        </div>
-                        {vlan.ports && <span className="text-[10px] text-slate-400 font-sans max-w-[180px] text-right truncate">{vlan.ports}</span>}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-slate-500 p-4 text-center bg-slate-900/40 rounded-lg border border-slate-800/50">No VLANs configured.</div>
-                )}
-              </>
+              <div className="text-slate-500 p-4 text-center bg-slate-900/40 rounded-lg border border-slate-800/50">No VLANs configured.</div>
             )}
           </div>
         )}
