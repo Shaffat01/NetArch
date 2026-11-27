@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1220">
+  <title>NetAtlas — WMTC / WHIL Architecture</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none"><path d="M8 9.5 16 5l8 4.5v9L16 23l-8-4.5v-9Z" stroke="currentColor" stroke-width="1.8"/><path d="m8 9.5 8 4.5 8-4.5M16 14v9M16 5v9" stroke="currentColor" stroke-width="1.8"/><circle cx="16" cy="14" r="2.2" fill="currentColor"/></svg>
+        </div>
+        <div><strong>NetAtlas</strong><span>Network architecture</span></div>
+      </div>
+
+      <div class="nav-caption">WORKSPACE</div>
+      <nav class="main-nav" id="mainNav" aria-label="Architecture views">
+        <button class="nav-item active" data-view="architecture"><span data-icon="topology"></span>Architecture<span class="nav-arrow">›</span></button>
+        <button class="nav-item" data-view="live"><span data-icon="activity"></span>Live operations<span class="nav-arrow">›</span></button>
+        <button class="nav-item" data-view="datacenter"><span data-icon="server"></span>DC / NDC<span class="nav-arrow">›</span></button>
+        <button class="nav-item" data-view="connectivity"><span data-icon="link"></span>Port connectivity<span class="nav-arrow">›</span></button>
+        <button class="nav-item" data-view="ipam"><span data-icon="rows"></span>IPAM &amp; peering<span class="nav-arrow">›</span></button>
+        <button class="nav-item" data-view="dmz"><span data-icon="shield"></span>DMZ / MZ<span class="nav-arrow">›</span></button>
+        <button class="nav-item" data-view="records"><span data-icon="table"></span>Source records<span class="nav-arrow">›</span></button>
+      </nav>
+
+      <div class="sidebar-spacer"></div>
+      <div class="side-note">
+        <div class="side-note-title"><span class="status-dot"></span>Workbook + local edits</div>
+        <p>251 topology rows · 109 DC / NDC<br>431 port links · 90 IP blocks<br>98 VLANs · 155 DMZ / MZ</p>
+        <span class="side-note-badge">Editable local workspace</span>
+      </div>
+      <div class="side-legend">
+        <div><i class="legend-line"></i>Documented link</div>
+        <div><i class="legend-gap"></i>Source gap — no inference</div>
+      </div>
+    </aside>
+
+    <div class="content-shell">
+      <header class="topbar">
+        <button class="icon-button menu-toggle" id="menuToggle" aria-label="Toggle navigation"><span data-icon="menu"></span></button>
+        <div class="site-switch" id="siteSwitch" aria-label="Workbook perspective">
+          <button class="active" data-site="WMTC">WMTC</button>
+          <button data-site="WHIL">WHIL</button>
+        </div>
+        <div class="search-box" id="searchBox">
+          <span data-icon="search"></span>
+          <input id="globalSearch" type="search" autocomplete="off" placeholder="Search device, IP, VLAN, port, service…" aria-label="Search network workspace">
+          <kbd>/</kbd>
+          <div class="search-results" id="searchResults" hidden></div>
+        </div>
+        <div class="topbar-meta"><span class="status-dot"></span><span id="saveStatus">Editable workspace</span></div>
+        <button class="button secondary export-top" id="topExport"><span data-icon="download"></span><span>Export</span></button>
+      </header>
+
+      <main id="main" tabindex="-1"></main>
+    </div>
+  </div>
+
+  <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
+  <aside class="drawer" id="drawer" aria-label="Details" aria-hidden="true"></aside>
+  <div class="editor-backdrop" id="editorBackdrop" hidden></div>
+  <section class="editor-modal" id="editorModal" aria-label="Device editor" hidden></section>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="data.js"></script>
+  <script src="unified.js"></script>
+  <script src="crud.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

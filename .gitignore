@@ -1,27 +1,7 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-.venv/
-venv/
-*.egg-info/
-*.egg
-
-# Node
 node_modules/
-net-diagram-app/node_modules/
-net-diagram-app/dist/
-
-# OS / IDE
-.vscode/
-.idea/
-*.swp
-.DS_Store
-
-# Env
 .env
-.env.local
-*.log
-
-# Local caches
-google_drive/
+data/netarch.db
+data/sources/
+data/user-state.json
+*.tmp
+dist/

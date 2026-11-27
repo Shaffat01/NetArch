@@ -1,147 +1,132 @@
-# NetArch NOC — Network Topology Visualizer
+# NetArch — IP-centric Network Infrastructure Inventory
 
-A real-time Enterprise Network Operations Center (NOC) topology visualizer built for Walton DC & NDC infrastructure. Features interactive network diagrams for multiple sites, deep device inspection, and persistent layout storage.
+Strict-TypeScript, offline, IP-first network inventory. Four authoritative source
+workbooks are ingested into a local SQLite snapshot and served through a Fastify
+API and a self-contained web SPA — no external services, no internet calls.
 
-## 🏗 Architecture
+**The sources are read-only.** NetArch never modifies the input workbooks.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                   NetArch NOC Stack                         │
-├─────────────────────────────────────────────────────────────┤
-│  Frontend (React 19 + Vite + ReactFlow + TailwindCSS)      │
-│  ├── Multi-site tab system (DC / NDC)                       │
-│  ├── Interactive topology canvas (drag, zoom, pan)           │
-│  ├── Device inspector drawer (interfaces, BGP, VLANs)        │
-│  ├── Device palette for adding new nodes                     │
-│  ├── Search & highlight per site                             │
-│  └── Export to PNG / PDF (per-site)                          │
-├─────────────────────────────────────────────────────────────┤
-│  Backend API (FastAPI + SQLAlchemy + SQLite)                │
-│  ├── GET  /api/sites           – List all sites             │
-│  ├── GET  /api/topology?site=  – Load site topology          │
-│  ├── POST /api/topology        – Save full topology          │
-│  ├── POST /api/topology/layout – Save positions only         │
-│  ├── POST /api/topology/reset  – Reset site to default       │
-│  └── GET  /api/health          – Health check                │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## 🚀 Quick Start
-
-### Backend Setup
+## Quick start
 
 ```bash
-cd backend
-python3 -m venv ../.venv
-source ../.venv/bin/activate
-pip install -r requirements.txt
-
-# Seed both DC and NDC topologies
-python seed_complete.py   # DC site
-python seed_ndc.py        # NDC site
-
-# Run the API server
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-### Frontend Setup
-
-```bash
-cd net-diagram-app
+# 1. Place the four read-only workbooks in data/sources/
+#    (see "Inputs" below)
 npm install
-npm run dev
+npm run ingest     # parse → normalize → resolve → merge → persist (a few seconds)
+npm start          # serve API + UI on http://0.0.0.0:3000
 ```
 
-Frontend runs at: http://localhost:5173 (proxies `/api` to backend)
+Open `http://localhost:3000`. Set `PORT`/`HOST`/`NETARCH_DB_PATH`/`NETARCH_SOURCES_DIR`
+to override. The server refuses to start without a snapshot — run `npm run ingest` first.
 
-## 🏢 Sites
+## Inputs
 
-The application currently supports two physical data center sites, switchable via tabs in the top navigation:
+`data/sources/` holds the four read-only, authoritative source workbooks:
 
-| Tab | Site | Location | Mgmt Subnet | Devices |
-|-----|------|----------|-------------|---------|
-| **DC** (cyan) | Primary Data Center | Kaliakair | 172.16.0.0/24 | 12 devices, 23 links |
-| **NDC** (violet) | Near/Non-Data Center (DR) | Chandra | 172.16.6.0/24 | 10 devices, 19 links |
+| File | Contents |
+| --- | --- |
+| `HQ-ACCESS-SWITCH-INFO.xlsx` | HQ access/distribution/core register (5 tabs) |
+| `All Building VLAN & Floor Information(NOC).xlsx` | Full tenant inventory — WHIL/WMTC buildings, DC/NDC, network blocks, CCTV/WiFi/Machine IT, serial numbers (22 tabs) |
+| `ISP Real IPs.xlsx` | By-site ISP provider allocations — Corporate/DC-HQ/NDC-HQ × BracNet/AGNI/ADN, one `/28` per row (9 rows) |
+| `DC Link Peerings.xlsx` | DC provider link peerings — DC-CORE-RT-01/02 loopbacks (BGP peering, ADN/AGNI data & NAT, BracNet INT/DATA) for the PRI/SEC ISP links (18 rows) |
 
-### DC Site Devices (from real backups)
-- 4× ISP (ADN, Agni, BracNet, MetroNet)
-- 2× WAN Switch (DC-WAN-SW-01/02, C9500)
-- 2× Firewall (DC-FW-01/02)
-- 2× Core Router (DC-CORE-RT-01/02, ASR 1001-X)
-- 2× Core Switch (DC-CORE-SW-01/02, vPC pair)
+Both are committed nowhere — they are real, sensitive network data and stay out of git.
+The snapshot the app serves from is `data/netarch.db` (also generated, also ignored).
 
-### NDC Site Devices (from real config backups)
-- 3× ISP (ADN, Agni, BracNet — NDC handoffs)
-- 2× WAN Switch (NDC-WAN-SW-01/02, C9500, IOS-XE 17.6.4)
-- 2× Firewall (NDC-FW-01/02)
-- 2× Core Router (NDC-CORE-RT-01/02, ASR 1001-X, IOS-XE 17.6.3a)
-- 1× Core Switch (NDC-CORE-SW-01, C9500 StackWise Virtual — 2×C9500-40X)
-
-## 📂 Project Structure
+## How it works
 
 ```
-NetArch/
-├── backend/
-│   ├── main.py              # FastAPI app with multi-site endpoints
-│   ├── models.py            # SQLAlchemy model with site field
-│   ├── database.py          # SQLite engine & session
-│   ├── seed_complete.py     # DC site seed (12 devices)
-│   ├── seed_ndc.py          # NDC site seed (10 devices)
-│   ├── seed_dc_all.py       # Legacy DC seed
-│   ├── seed_dc_wan.py       # Legacy WAN seed
-│   ├── requirements.txt
-│   └── network_topology.db
-├── net-diagram-app/
-│   ├── src/
-│   │   ├── App.jsx          # Main app with site tabs
-│   │   ├── components/
-│   │   │   └── CustomDeviceNode.jsx
-│   │   ├── index.css        # Tailwind + NOC styles
-│   │   └── main.jsx
-│   ├── index.html
-│   ├── vite.config.js       # Vite + API proxy
-│   └── package.json
-└── README.md
+workbooks (xlsx)
+  → src/ingest  (exceljs: parse sheets → RawRecord[], sheet-by-sheet, per-config parsers)
+  → src/normalize (IPs: 8-bit/6-bit, CIDRs, ranges ≤1024, ports, IPv6; names: clean + canonical key)
+  → src/resolve (per-IP canonical-name scoring; register sheet > inventory sheet > IP-only)
+  → src/merge (IP-first identity: one MasterDevice per canonical device; one MasterIp per IP;
+               connections by attested IP or resolved name, flagged by matchKind)
+  → src/db (node:sqlite snapshot: devices / ips / connections + ingest metadata + sheet stats)
+  → src/api (Fastify: /api/*)  +  src/web (hash-routed SPA: overview, devices, IPs, graph, sources, device & IP detail)
 ```
 
-## 🎨 Features
+- **IP is the primary identity signal** — devices merge by IP/canonical name, never the other way around.
+- **Names are display labels.** Every device carries one canonical name plus all its
+  aliases (each with source sheet/file, confidence, and the sheet-count evidence).
+- **Unmatched neighbors are never invented.** Edges without IP evidence stay flagged
+  `name`; edges without either are recorded as unmatched, not drawn.
+- **The UI is exportable.** One click downloads the full inventory as CSV
+  (one row per device — name, type, IPs, aliases, serial, model, location,
+  confidence, chain position, sources) or the full JSON snapshot.
+- **The device list is filterable by type** (all / typed / UNKNOWN / each
+  device type) via chips above the table — the filter is URL-driven and
+  shareable.
+- **Every record is accounted for** — records, IPs, devices, connections, and the 3
+  known warnings are all visible on the Sources page.
+- **Provider ranges are carried as evidence** — the 9 `/28` allocations plus the
+  18 DC link peering loopbacks ingest as network records and are merged by IP like
+  everything else, so a record that matches an existing IP is one row, never two.
 
-- **Multi-Site Tabs**: Switch between DC (cyan theme) and NDC (violet theme) topologies
-- **Interactive Canvas**: Drag, pan, zoom with ReactFlow; per-site state preserved
-- **Custom Device Nodes**: Color-coded by role with live status LEDs & port matrix
-- **Deep Inspection Drawer**: Per-device tabs for Overview, Interfaces, BGP/OSPF, VLANs, DCI Tunnels, System details
-- **Add Devices**: Palette for dropping new nodes onto the current site
-- **Connect Nodes**: Drag from handles to create new links
-- **Search**: Highlight devices by hostname/IP/model (per site)
-- **Export**: Download current site as PNG or PDF
-- **Save Layout**: Persist positions/connections per site to SQLite
-- **Dark NOC Theme**: Professional dark mode optimized for operations centers
+## API
 
-## 📡 NDC VLAN Scheme (from actual configs)
+All endpoints served under `/api`:
 
-| VLAN | Name | Purpose |
-|------|------|---------|
-| 181 | ADN_DATA_PRI | ADN primary data |
-| 182 | ADN_INT_PRI | ADN primary internet |
-| 205 | ADN_DATA_SEC | ADN secondary data |
-| 206 | ADN_INT_SEC | ADN secondary internet |
-| 501 | BracNet-DATA-PRI | BracNet primary data |
-| 502 | BracNet-DATA-SEC | BracNet secondary data |
-| 505 | AGNI_INT_PRI | Agni primary internet |
-| 506 | AGNI_DATA_PRI | Agni primary data |
-| 507 | AGNI_INT_SEC | Agni secondary internet |
-| 508 | AGNI_DATA_SEC | Agni secondary data |
-| 705 | BracNet-INT&DATA-PRI | BracNet primary |
-| 706 | BracNet-INT&DATA-SEC | BracNet secondary |
-| 1606 | MGMT | Management VLAN |
-| 1680 | RT-FW | Router-Firewall transit |
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /api/health` | Snapshot health + validation details |
+| `GET /api/summary` | Headline counts + ingest metadata |
+| `GET /api/sources` | Per-sheet record/warning inventory |
+| `GET /api/devices?q&type&page&pageSize` | Device list (named devices first) — `type` = all / named / unknown / a device type |
+| `GET /api/devices/:id` | Device detail — aliases, IPs, connections, chain uplink/downlink |
+| `GET /api/devices/:id/ips` · `/connections` | Device IPs / connections |
+| `GET /api/ips?q&page&pageSize` | IP index (IPv4 first) |
+| `GET /api/ips/:ip` | IP detail — owning devices, connections, aliases |
+| `GET /api/graph` | IP-anchored layered graph (nodes + edges + summary) |
+| `GET /api/export?format=csv\|json` | Inventory export — one CSV row per device (IPs, aliases, sources, confidence) or the full JSON snapshot |
+| `GET /api/search?q` | Devices + IPs matched by name, alias, IP, serial, model, location |
 
-## 🔧 Source Config Files
+## Development
 
-Device configurations sourced from Google Drive backup files (Walton real devices):
-- `backup_DC_WAN-SW1.txt`, `backup_DC_WAN_SW2.txt`
-- `backup_DC_CORE_RT1.txt`, `backup_DC_CorE_RT2.txt`
-- `backup_DC_CORE_SW.txt`
-- `backup_NDC_WAN_SW1.txt`, `backup_NDC_WAN_SW2.txt`
-- `backup_NDC_RT1.txt`, `backup_NDC_RT2.txt`
-- `backup_NDC_CORE_SW.txt`
+```bash
+npm test           # vitest: ip/name normalization + merge + API + real-source ingest
+npm run check      # strict TS, no emit
+npm run ingest     # rebuild the snapshot
+npm start          # API + UI on :3000
+npm run dev        # same, with tsx watch
+```
+
+`scripts/smoke-spa.mjs` boots the API and drives the SPA in jsdom (overview →
+device → graph → sources → IPs → search → type filter + chip click
+→ export link) — it is the regression harness for front-end wiring
+without a browser.
+
+## Layout
+
+```
+src/
+  config/index.ts    central env/paths (never reads process.env elsewhere)
+  types/index.ts     RawRecord, NormalizedIp, MergeResult, MasterDevice/Ip/Connection
+  ingest/            workbook loading, per-sheet parsers + configs, CLI
+  normalize/         IP parser (ports/prefixes/ranges/IPv6), name cleaner
+  resolve/           per-IP canonical-name scoring + device classification
+  merge/             IP-first identity resolution + connections
+  graph/             layered, IP-anchored graph builder
+  db/                node:sqlite snapshot (load/save/search helpers)
+  api/server.ts      Fastify app + static SPA
+  web/public/        self-contained SPA — index.html, styles.css, app.js (no build step)
+scripts/smoke-spa.mjs   jsdom front-end smoke harness
+tests/               vitest suites
+```
+
+## Data quality notes (current snapshot)
+
+- 539 devices resolve to `UNKNOWN` type (no per-device model/type evidence).
+- `Old-Acc-Sw-Sheet` neighbor IPs detect at column 10 while the config says col 1 —
+  auto-detection wins and the difference is logged as a warning.
+- `New-Acc-Sw-Sheet` is header-only and is skipped by config.
+- `Core Device` carries no neighbor-IP column — Core edges are name-only.
+- Conflict evidence and per-IP devices are kept separate; IP-only placeholder
+  devices show an `(IP only)` badge.
+
+## Legacy
+
+This repo also contains the pre-existing **NetAtlas** app (`server.mjs`, `live.mjs`,
+`public/`, `start-netatlas.*`, `peering-safe.xlsx`, `source.xlsx`, `scripts_inventory_dump.mjs`).
+It is **not** part of the strict-TS pipeline and is only documented for reference —
+see `LOCAL-RUN.md` for its original usage. NetArch (this README) is the default path.
