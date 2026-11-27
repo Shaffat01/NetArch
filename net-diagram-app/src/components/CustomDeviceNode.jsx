@@ -22,6 +22,7 @@ const getDeviceTheme = (deviceType) => {
         accent: 'text-sky-400',
       };
     case 'WAN Switch':
+    case 'Switch':
     case 'switch':
       return {
         border: 'border-cyan-500/60 hover:border-cyan-400',
@@ -32,6 +33,7 @@ const getDeviceTheme = (deviceType) => {
         accent: 'text-cyan-400',
       };
     case 'Core Router':
+    case 'Router':
     case 'router':
       return {
         border: 'border-amber-500/60 hover:border-amber-400',
@@ -84,8 +86,15 @@ const CustomDeviceNode = ({ data, selected }) => {
   const theme = getDeviceTheme(data.deviceType);
   const IconComponent = theme.icon;
   const isOnline = data.status !== 'offline' && data.status !== 'down';
-  const mgmtIp = data.mgmtIP || data.mgmtIp || data.ip || 'N/A';
-  const interfaceCount = data.interfaces ? data.interfaces.length : 0;
+  const rawIp = data.mgmtIP || data.mgmtIp || data.ip || 'N/A';
+  const mgmtIp = (!rawIp || rawIp === '—' || rawIp === '-' || rawIp === 'N/A') ? 'N/A' : rawIp;
+  // Properly count interfaces: split semicolon-separated strings, or use array length
+  let interfaceCount = 0;
+  if (Array.isArray(data.interfaces)) {
+    interfaceCount = data.interfaces.length;
+  } else if (typeof data.interfaces === 'string' && data.interfaces.trim().length > 0) {
+    interfaceCount = data.interfaces.split(/;\s*/).map(s => s.trim()).filter(Boolean).length;
+  }
 
   return (
     <div
