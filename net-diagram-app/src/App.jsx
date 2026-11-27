@@ -1664,7 +1664,7 @@ function DeviceDrawer({ node, activeTab, setActiveTab, onClose, onDelete, siteAc
                 <InfoCard title="Quick Stats">
                   <InfoRow label="Interfaces" value={Array.isArray(d.interfaces) ? `${d.interfaces.length} configured` : (typeof d.interfaces === 'string' ? 'see notes' : 'N/A')} accent="text-emerald-300" />
                   <InfoRow label="BGP Neighbors" value={d.bgpNeighbors ? `${d.bgpNeighbors.length} peers` : 'N/A'} accent="text-amber-300" />
-                  <InfoRow label="DCI Tunnels" value={d.dciTunnels ? `${d.dciTunnels.length} tunnels` : 'N/A'} accent="text-sky-300" />
+                  <InfoRow label="Tunnels" value={(d.tunnels?.length || 0) + (d.dciTunnels?.length || 0) > 0 ? `${(d.tunnels?.length||0)+(d.dciTunnels?.length||0)} (${d.tunnels?.length||0} GRE/IPsec${d.dciTunnels?.length ? ' + '+(d.dciTunnels.length)+' DCI' : ''})` : 'N/A'} accent="text-sky-300" />
                 </InfoCard>
                 {simulationMode && (
                   <button
@@ -1939,16 +1939,58 @@ function DeviceDrawer({ node, activeTab, setActiveTab, onClose, onDelete, siteAc
 
         {activeTab === 'tunnels' && (
           <div className="space-y-2 animate-tab">
-            <div className="text-[11px] text-slate-400 font-sans font-bold uppercase tracking-wider mb-1">DCI & GRE Tunnels ({Array.isArray(d.dciTunnels) ? d.dciTunnels.length : 0})</div>
-            {Array.isArray(d.dciTunnels) && d.dciTunnels.length > 0 ? (
-              d.dciTunnels.map((tun, idx) => (
-                <div key={idx} className="bg-slate-900/70 p-3 rounded-lg border border-slate-800 flex items-center gap-2 text-cyan-300">
-                  <Zap size={14} className="text-amber-400 flex-shrink-0" />
-                  <span className="text-[11px]">{tun}</span>
+            {/* GRE/IPsec branch + special tunnels (from d.tunnels) */}
+            {Array.isArray(d.tunnels) && d.tunnels.length > 0 && (
+              <>
+                <div className="text-[11px] text-slate-400 font-sans font-bold uppercase tracking-wider mb-1">
+                  GRE / IPsec Tunnels ({d.tunnels.length})
                 </div>
-              ))
-            ) : (
-              <div className="text-slate-500 p-4 text-center bg-slate-900/40 rounded-lg border border-slate-800/50">No DCI/GRE tunnels configured.</div>
+                <div className="space-y-1.5">
+                  {d.tunnels.map((tun, idx) => {
+                    const isDr = /DR|100G/i.test(tun.desc || tun.name || '');
+                    const isBranch = /branch|CSM|WSMS|remote/i.test(tun.desc || tun.name || '');
+                    const isSpecial = !isDr && !isBranch;
+                    const accent = isDr ? 'border-orange-500/30 bg-orange-500/10' :
+                                   isBranch ? 'border-emerald-500/30 bg-emerald-500/10' :
+                                   'border-sky-500/30 bg-sky-500/10';
+                    const iconColor = isDr ? 'text-orange-400' : isBranch ? 'text-emerald-400' : 'text-sky-400';
+                    const badge = isDr ? 'DR' : isBranch ? 'BRANCH' : 'SPECIAL';
+                    const badgeColor = isDr ? 'bg-orange-500/20 text-orange-300' :
+                                       isBranch ? 'bg-emerald-500/20 text-emerald-300' :
+                                       'bg-sky-500/20 text-sky-300';
+                    return (
+                      <div key={`t-${idx}`} className={`p-2.5 rounded-lg border ${accent} space-y-0.5`}>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Radio size={13} className={iconColor + ' flex-shrink-0'} />
+                          <span className="text-cyan-300 font-bold font-mono text-[11px]">{tun.name}</span>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${badgeColor}`}>{badge}</span>
+                          {tun.speed && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">{tun.speed}</span>}
+                          {tun.count && <span className="text-[9px] text-slate-400 font-mono">{tun.count}</span>}
+                          {tun.mtu && <span className="text-[9px] text-slate-500 font-mono">MTU {tun.mtu}</span>}
+                        </div>
+                        {tun.desc && <div className="text-[11px] text-slate-300 pl-5">{tun.desc}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+            {/* DCI tunnels (from d.dciTunnels if present as array of strings) */}
+            {Array.isArray(d.dciTunnels) && d.dciTunnels.length > 0 && (
+              <>
+                <div className="text-[11px] text-slate-400 font-sans font-bold uppercase tracking-wider mb-1 mt-2">
+                  DCI Links ({d.dciTunnels.length})
+                </div>
+                {d.dciTunnels.map((tun, idx) => (
+                  <div key={`d-${idx}`} className="bg-slate-900/70 p-2 rounded-lg border border-slate-800 flex items-center gap-2">
+                    <Zap size={14} className="text-amber-400 flex-shrink-0" />
+                    <span className="text-[11px] text-slate-200">{tun}</span>
+                  </div>
+                ))}
+              </>
+            )}
+            {(!Array.isArray(d.tunnels) || d.tunnels.length === 0) && (!Array.isArray(d.dciTunnels) || d.dciTunnels.length === 0) && (
+              <div className="text-slate-500 p-4 text-center bg-slate-900/40 rounded-lg border border-slate-800/50">No tunnels configured.</div>
             )}
           </div>
         )}
