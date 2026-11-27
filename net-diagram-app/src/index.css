@@ -20,64 +20,58 @@
   }
 }
 
-/* Custom Animations for NOC Dashboard */
+/* ===== Custom Animations for NOC Dashboard ===== */
 @keyframes pulseGlow {
-  0%, 100% {
-    box-shadow: 0 0 15px rgba(59, 130, 246, 0.3), 0 0 30px rgba(59, 130, 246, 0.1);
-  }
-  50% {
-    box-shadow: 0 0 25px rgba(59, 130, 246, 0.6), 0 0 45px rgba(59, 130, 246, 0.25);
-  }
+  0%, 100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.3), 0 0 30px rgba(59, 130, 246, 0.1); }
+  50% { box-shadow: 0 0 25px rgba(59, 130, 246, 0.6), 0 0 45px rgba(59, 130, 246, 0.25); }
 }
 
 @keyframes alertGlow {
-  0%, 100% {
-    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 30px rgba(239, 68, 68, 0.8);
-  }
+  0%, 100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.8); }
 }
 
 @keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes fadeInScale {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
 
-.animate-noc-selected {
-  animation: pulseGlow 2.5s infinite ease-in-out;
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-.animate-noc-offline {
-  animation: alertGlow 1.5s infinite ease-in-out;
+@keyframes slideInFromTop {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-drawer {
-  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+@keyframes slideInFromBottom {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-tab {
-  animation: fadeInScale 0.2s ease-out forwards;
-}
+.animate-noc-selected { animation: pulseGlow 2.5s infinite ease-in-out; }
+.animate-noc-offline { animation: alertGlow 1.5s infinite ease-in-out; }
+.animate-drawer { animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-tab { animation: fadeInScale 0.2s ease-out forwards; }
 
-/* React Flow Controls Dark Styling */
+/* Simple tailwind-like animate-in classes */
+.animate-in { animation-duration: 0.2s; animation-fill-mode: both; animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
+.fade-in { animation-name: fadeIn; }
+.slide-in-from-right { animation-name: slideInRight; }
+.slide-in-from-top-2 { animation-name: slideInFromTop; }
+.slide-in-from-bottom-2 { animation-name: slideInFromBottom; }
+.duration-150 { animation-duration: 150ms; }
+.duration-200 { animation-duration: 200ms; }
+.duration-300 { animation-duration: 300ms; }
+
+/* React Flow Dark Theme Overrides */
 .react-flow__controls {
   background: rgba(15, 23, 42, 0.85) !important;
   backdrop-filter: blur(12px);
@@ -97,4 +91,117 @@
 .react-flow__controls-button:hover {
   background: rgba(59, 130, 246, 0.2) !important;
   fill: #ffffff !important;
+}
+
+.react-flow__edge-text {
+  font-size: 10px !important;
+  font-family: ui-monospace, monospace !important;
+}
+
+.react-flow__attribution {
+  background: rgba(15, 23, 42, 0.7) !important;
+  border-radius: 4px;
+}
+
+.react-flow__attribution a {
+  color: #64748b !important;
+  font-size: 9px;
+}
+
+.react-flow__handle {
+  width: 10px !important;
+  height: 10px !important;
+}
+
+/* Edge label styling */
+.react-flow__edge-textbg {
+  fill: rgba(15, 23, 42, 0.9) !important;
+}
+
+.react-flow__edge-text {
+  fill: #cbd5e1 !important;
+}
+
+/* Selection highlight */
+.react-flow__node.selected {
+  z-index: 10;
+}
+
+/* Search match pulse */
+@keyframes search-match {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.0), 0 0 20px rgba(250, 204, 21, 0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(250, 204, 21, 0.15), 0 0 32px rgba(250, 204, 21, 0.7); }
+}
+.search-match-pulse {
+  animation: search-match 1.2s ease-in-out infinite;
+  border-color: #facc15 !important;
+  z-index: 20;
+}
+
+/* Failed node/edge styling */
+.react-flow__node.failed {
+  opacity: 0.2;
+  filter: grayscale(1);
+}
+
+/* Edge selectable cursor */
+.react-flow__edge {
+  cursor: pointer;
+}
+.react-flow__edge path {
+  transition: stroke-width 0.2s, filter 0.2s;
+}
+.react-flow__edge:hover path {
+  stroke-width: 4;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+/* Traffic flow animation (direction) */
+@keyframes dash-flow {
+  to { stroke-dashoffset: -20; }
+}
+.traffic-animated path {
+  stroke-dasharray: 8 6;
+  animation: dash-flow 0.8s linear infinite;
+}
+
+/* Backup path activation (during failure simulation) */
+@keyframes backup-pulse {
+  0%, 100% { stroke-width: 5; filter: drop-shadow(0 0 8px #22c55e); }
+  50% { stroke-width: 7; filter: drop-shadow(0 0 16px #22c55e); }
+}
+.backup-active path {
+  animation: backup-pulse 1s ease-in-out infinite;
+}
+
+/* ISP edge badges - make labels stand out */
+.react-flow__edge.isp-edge text {
+  paint-order: stroke;
+  stroke: #0f172a;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  font-weight: 800;
+  pointer-events: none;
+}
+.react-flow__edge.isp-pri path {
+  stroke-linecap: round;
+}
+.react-flow__edge.isp-sec path {
+  stroke-linecap: round;
+}
+/* Primary Internet edge (AGNI) gets subtle gold star glow */
+.react-flow__edge.isp-primary-star {
+  filter: drop-shadow(0 0 3px rgba(251, 191, 36, 0.3));
+}
+
+/* Scrollbar styling for panels */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+}
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: rgba(71, 85, 105, 0.7);
+  border-radius: 3px;
 }

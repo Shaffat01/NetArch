@@ -1,44 +1,45 @@
 import React, { memo } from 'react';
 import { Handle, Position } from 'reactflow';
-import { 
-  Server, 
-  Shield, 
-  Cpu, 
-  Network, 
-  Cloud, 
-  Activity, 
-  CheckCircle2, 
-  AlertTriangle 
+import {
+  Server,
+  Shield,
+  Cpu,
+  Network,
+  Cloud,
+  Activity,
 } from 'lucide-react';
 
 const getDeviceTheme = (deviceType) => {
   switch (deviceType) {
     case 'ISP / Cloud':
+    case 'isp':
       return {
         border: 'border-sky-500/60 hover:border-sky-400',
         glow: 'shadow-[0_0_20px_rgba(56,189,248,0.25)]',
         bg: 'from-slate-900/95 to-sky-950/40',
         badge: 'bg-sky-500/20 text-sky-300 border-sky-500/40',
         icon: Cloud,
-        accent: 'text-sky-400'
+        accent: 'text-sky-400',
       };
     case 'WAN Switch':
+    case 'switch':
       return {
         border: 'border-cyan-500/60 hover:border-cyan-400',
         glow: 'shadow-[0_0_20px_rgba(6,182,212,0.25)]',
         bg: 'from-slate-900/95 to-cyan-950/40',
         badge: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
         icon: Network,
-        accent: 'text-cyan-400'
+        accent: 'text-cyan-400',
       };
     case 'Core Router':
+    case 'router':
       return {
         border: 'border-amber-500/60 hover:border-amber-400',
         glow: 'shadow-[0_0_20px_rgba(245,158,11,0.25)]',
         bg: 'from-slate-900/95 to-amber-950/40',
         badge: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
         icon: Cpu,
-        accent: 'text-amber-400'
+        accent: 'text-amber-400',
       };
     case 'Firewall':
       return {
@@ -47,7 +48,7 @@ const getDeviceTheme = (deviceType) => {
         bg: 'from-slate-900/95 to-rose-950/40',
         badge: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
         icon: Shield,
-        accent: 'text-rose-400'
+        accent: 'text-rose-400',
       };
     case 'Core Switch':
       return {
@@ -56,7 +57,16 @@ const getDeviceTheme = (deviceType) => {
         bg: 'from-slate-900/95 to-indigo-950/40',
         badge: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40',
         icon: Server,
-        accent: 'text-indigo-400'
+        accent: 'text-indigo-400',
+      };
+    case 'Unknown':
+      return {
+        border: 'border-amber-500/40 hover:border-amber-400 border-dashed',
+        glow: 'shadow-[0_0_15px_rgba(251,191,36,0.15)]',
+        bg: 'from-slate-900/95 to-amber-950/30',
+        badge: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+        icon: Activity,
+        accent: 'text-amber-400',
       };
     default:
       return {
@@ -65,7 +75,7 @@ const getDeviceTheme = (deviceType) => {
         bg: 'from-slate-900/95 to-slate-800/40',
         badge: 'bg-slate-700/40 text-slate-300 border-slate-600/40',
         icon: Server,
-        accent: 'text-slate-400'
+        accent: 'text-slate-400',
       };
   }
 };
@@ -73,7 +83,9 @@ const getDeviceTheme = (deviceType) => {
 const CustomDeviceNode = ({ data, selected }) => {
   const theme = getDeviceTheme(data.deviceType);
   const IconComponent = theme.icon;
-  const isOnline = data.status === 'online';
+  const isOnline = data.status !== 'offline' && data.status !== 'down';
+  const mgmtIp = data.mgmtIP || data.mgmtIp || data.ip || 'N/A';
+  const interfaceCount = data.interfaces ? data.interfaces.length : 0;
 
   return (
     <div
@@ -109,7 +121,7 @@ const CustomDeviceNode = ({ data, selected }) => {
       {/* Hostname */}
       <div className="mb-1">
         <h3 className="text-sm font-bold text-white tracking-wide truncate">
-          {data.hostname || 'Unknown Host'}
+          {data.hostname || data.label || 'Unknown Host'}
         </h3>
       </div>
 
@@ -117,7 +129,7 @@ const CustomDeviceNode = ({ data, selected }) => {
       <div className="flex items-center justify-between text-xs text-slate-300 font-mono mb-2.5">
         <div className="flex items-center gap-1.5">
           <span className="text-slate-400 text-[10px]">IP:</span>
-          <span className="text-cyan-300 font-semibold">{data.mgmtIP || 'N/A'}</span>
+          <span className="text-cyan-300 font-semibold truncate max-w-[150px]">{mgmtIp}</span>
         </div>
         <div className="flex items-center gap-1">
           <span className="relative flex h-2 w-2">
@@ -146,7 +158,7 @@ const CustomDeviceNode = ({ data, selected }) => {
           </div>
         </div>
         <span className="text-[9px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700/50">
-          {data.interfaces ? `${data.interfaces.length} IFs` : '24x25G'}
+          {interfaceCount > 0 ? `${interfaceCount} IFs` : '24x25G'}
         </span>
       </div>
     </div>
