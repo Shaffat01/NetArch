@@ -2,7 +2,7 @@
 # NetArch startup script for Linux
 set -e
 
-BACKEND_PORT="${BACKEND_PORT:-8000}"
+BACKEND_PORT="${BACKEND_PORT:-8001}"
 FRONTEND_PORT="${FRONTEND_PORT:-8090}"
 
 echo "=== NetArch NOC Topology ==="
@@ -10,12 +10,12 @@ echo "  Backend port: $BACKEND_PORT"
 echo "  Frontend port: $FRONTEND_PORT"
 echo ""
 
-# Kill any existing processes on our ports
-echo "Cleaning up old processes..."
-fuser -k 8000/tcp 2>/dev/null || true
-fuser -k 8090/tcp 2>/dev/null || true
+# Kill any existing processes on our ports (don't touch port 8000 if another app uses it)
+echo "Cleaning up old processes on ports $BACKEND_PORT and $FRONTEND_PORT..."
 fuser -k "$BACKEND_PORT/tcp" 2>/dev/null || true
 fuser -k "$FRONTEND_PORT/tcp" 2>/dev/null || true
+# Kill orphaned uvicorn/vite from previous runs
+pkill -f "uvicorn main:app" 2>/dev/null || true
 sleep 1
 
 # Create venv if it doesn't exist
