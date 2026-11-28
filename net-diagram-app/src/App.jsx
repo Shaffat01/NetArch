@@ -1922,16 +1922,26 @@ function DeviceDrawer({ node, activeTab, setActiveTab, onClose, onDelete, siteAc
             })() : Array.isArray(d.vlans) && d.vlans.length > 0 ? (
               <>
                 <div className="text-[11px] text-slate-400 font-sans font-bold uppercase tracking-wider mb-1">Configured VLANs ({d.vlans.length})</div>
-                <div className="grid grid-cols-1 gap-2">
-                  {d.vlans.map((vlan, idx) => (
-                    <div key={idx} className="bg-slate-900/70 p-3 rounded-lg border border-slate-800 flex justify-between items-center gap-2">
-                      <div>
-                        <span className="text-purple-300 font-bold">VLAN {vlan.id}</span>
-                        <span className="text-slate-200 ml-3">{vlan.name}</span>
+                <div className="grid grid-cols-1 gap-1.5">
+                  {d.vlans.map((vlan, idx) => {
+                    // Color by VLAN range
+                    const vid = parseInt(vlan.id);
+                    const badgeColor = vid === 1 ? 'bg-slate-600/30 text-slate-300 border-slate-600/50'
+                                    : vid < 100 ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                                    : vid < 200 ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                    : vid < 500 ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                                    : vid < 1000 ? 'bg-violet-500/15 text-violet-300 border-violet-500/30'
+                                    : 'bg-sky-500/15 text-sky-300 border-sky-500/30';
+                    return (
+                      <div key={idx} className="bg-slate-900/70 p-2 rounded-lg border border-slate-800/80 flex items-start gap-2">
+                        <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border flex-shrink-0 mt-0.5 ${badgeColor}`}>V{vlan.id}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-slate-200 text-[11px] font-semibold">{vlan.name}</div>
+                          {vlan.ports && <div className="text-[10px] text-slate-400 font-mono mt-0.5 break-words">Ports: {vlan.ports}</div>}
+                        </div>
                       </div>
-                      {vlan.ports && <span className="text-[10px] text-slate-400 font-sans max-w-[180px] text-right truncate">{vlan.ports}</span>}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </>
             ) : (
