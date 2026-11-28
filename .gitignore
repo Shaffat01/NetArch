@@ -5,3 +5,9 @@ data/sources/
 data/user-state.json
 *.tmp
 dist/
+
+.venv/
+__pycache__/
+*.pyc
+backend/network_topology.db
+google_drive/
