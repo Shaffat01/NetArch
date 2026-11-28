@@ -49,6 +49,8 @@ import {
   EyeOff,
   Star,
   AlertTriangle,
+  EthernetPort,
+  PlugZap,
 } from 'lucide-react';
 
 import CustomDeviceNode from './components/CustomDeviceNode';
@@ -1432,6 +1434,7 @@ function DeviceDrawer({ node, activeTab, setActiveTab, onClose, onDelete, siteAc
     { id: 'interfaces', label: 'Interfaces', icon: Network },
     { id: 'bgp', label: 'BGP/Routing', icon: Zap },
     { id: 'vlans', label: 'VLANs', icon: Layers },
+    { id: 'neighbors', label: 'CDP Neighbors', icon: EthernetPort },
     { id: 'tunnels', label: 'Tunnels/DCI', icon: Radio },
     { id: 'details', label: 'System', icon: Database },
   ];
@@ -1933,6 +1936,54 @@ function DeviceDrawer({ node, activeTab, setActiveTab, onClose, onDelete, siteAc
               </>
             ) : (
               <div className="text-slate-500 p-4 text-center bg-slate-900/40 rounded-lg border border-slate-800/50">No VLANs configured.</div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'neighbors' && (
+          <div className="space-y-2 animate-tab">
+            {Array.isArray(d.neighbors) && d.neighbors.length > 0 ? (
+              <>
+                <div className="text-[11px] text-slate-400 font-sans font-bold uppercase tracking-wider mb-1">
+                  CDP / LLDP Neighbors ({d.neighbors.length})
+                </div>
+                <div className="space-y-1 max-h-[480px] overflow-y-auto pr-1">
+                  {/* Header row */}
+                  <div className="grid grid-cols-[80px_1fr_100px_70px] gap-1 text-[9px] text-slate-500 uppercase tracking-wider font-bold pb-1 border-b border-slate-800">
+                    <span>Local Port</span>
+                    <span>Neighbor</span>
+                    <span>Remote Port</span>
+                    <span>Type</span>
+                  </div>
+                  {d.neighbors.map((nbr, idx) => {
+                    const isUp = nbr.type === 'uplink';
+                    const isMgmt = nbr.type === 'mgmt';
+                    const rowBorder = isUp ? 'border-emerald-500/30 bg-emerald-500/5' :
+                                     isMgmt ? 'border-slate-700/40 bg-slate-800/20' :
+                                     'border-slate-800/60 bg-slate-900/40';
+                    const typeBadge = isUp ? 'bg-emerald-500/20 text-emerald-300' :
+                                     isMgmt ? 'bg-slate-600/30 text-slate-400' :
+                                     'bg-slate-700/40 text-slate-400';
+                    const typeLabel = isUp ? 'UPLINK' : isMgmt ? 'MGMT' : (nbr.vlan ? `V${nbr.vlan}` : 'ACCESS');
+                    return (
+                      <div key={`nbr-${idx}`} className={`grid grid-cols-[80px_1fr_100px_70px] gap-1 items-center p-1.5 rounded border ${rowBorder} text-[10px] font-mono`}>
+                        <span className="text-cyan-300 font-bold truncate" title={nbr.port}>{nbr.port}</span>
+                        <div className="min-w-0">
+                          <div className="text-slate-200 font-semibold truncate">{nbr.neighbor}</div>
+                          <div className="flex items-center gap-1.5 text-[9px] text-slate-500">
+                            {nbr.ip && nbr.ip !== '—' && <span className="text-amber-400">{nbr.ip}</span>}
+                            {nbr.model && nbr.model !== '—' && <span className="truncate">{nbr.model}</span>}
+                          </div>
+                        </div>
+                        <span className="text-slate-400 text-[9px] truncate" title={nbr.rport}>{nbr.rport}</span>
+                        <span className={`text-[8px] font-bold px-1 py-0.5 rounded text-center ${typeBadge}`}>{typeLabel}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="text-slate-500 p-4 text-center bg-slate-900/40 rounded-lg border border-slate-800/50">No CDP neighbor data.</div>
             )}
           </div>
         )}
